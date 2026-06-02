@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.venv/
+venv/
+ENV/
+env/
+.env
+.env.*
+!.env.example
+*.pem
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# Node / React (frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Model checkpoints and artifacts
+checkpoints/
+*.pt
+*.pth
+*.bin
+*.safetensors
+adapter_*/
+merged_model/
+outputs/
+runs/
+
+# Weights & Biases
+wandb/
+.wandb/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Serving / Docker
+*.log
+.docker/
+
+# Large data (keep raw dataset paths local; adjust if you version small samples)
+# data/*.jsonl
+# data/*.zip

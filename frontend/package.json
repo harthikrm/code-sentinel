@@ -1,0 +1,6 @@
+{
+  "name": "code-sentinel-frontend",
+  "private": true,
+  "version": "0.0.0",
+  "description": "React frontend for Code Sentinel code review UI"
+}

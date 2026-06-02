@@ -1,0 +1,2 @@
+# Pre-commit hooks for Code Sentinel (configure repos and versions before enabling)
+repos: []

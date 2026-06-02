@@ -1,0 +1,38 @@
+# Code Sentinel — Python dependencies (pin versions before production use)
+
+# --- Data ---
+# datasets
+# pandas
+# pyarrow
+
+# --- Training ---
+# torch
+# transformers
+# peft
+# bitsandbytes
+# accelerate
+# trl
+
+# --- Evaluation ---
+# bert-score
+# sacrebleu
+# nltk
+
+# --- Serving ---
+# fastapi
+# uvicorn[standard]
+# pydantic
+# google-cloud-aiplatform
+
+# --- Experiment tracking ---
+# wandb
+
+# --- Dev ---
+# pytest
+# pytest-cov
+# ruff
+# black
+# pre-commit
+# jupyter
+# ipykernel
+# mlx-lm  # Apple Silicon local inference
