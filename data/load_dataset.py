@@ -27,7 +27,10 @@ def process_file(input_file_path, output_file_path):
     print(f"Number of failed rows: {failed}")
 
 if __name__ == "__main__":
-    process_file(
-        "/Users/harthikmallichetty/Desktop/code-sentinel-data-source/ref-train.jsonl",
-        "/Users/harthikmallichetty/Desktop/code-sentinel-data-source/processed-train.jsonl"
-    )
+    input_files = ["ref-train", "ref-test", "ref-valid"]
+    output_files = ["processed-train", "processed-test", "processed-valid"]
+    for input_file, output_file in zip(input_files, output_files):
+        process_file(
+            f"/Users/harthikmallichetty/Desktop/code-sentinel-data-source/{input_file}.jsonl",
+            f"/Users/harthikmallichetty/Desktop/code-sentinel-data-source/{output_file}.jsonl"
+        )
