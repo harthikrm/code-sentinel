@@ -10,13 +10,21 @@ def process_file(input_file_path, output_file_path):
     input: file paths
     output: JSONL line-by-line processed as a JSON key-value pair
     """
+    passed = 0
+    failed = 0
+
     with open(input_file_path, "r") as infile, open(output_file_path, "w") as outfile:
         for line in infile:
             row = json.loads(line)
             if not is_valid_comment(row["comment"]):
+                failed += 1
                 continue
             formatted = format_example(row)
             outfile.write(json.dumps({"text": formatted}) + "\n")
+            passed += 1
+    
+    print(f"Number of passed rows: {passed}")
+    print(f"Number of failed rows: {failed}")
 
 if __name__ == "__main__":
     process_file(
