@@ -17,3 +17,9 @@ def process_file(input_file_path, output_file_path):
                 continue
             formatted = format_example(row)
             outfile.write(json.dumps({"text": formatted}) + "\n")
+
+if __name__ == "__main__":
+    process_file(
+        "/Users/harthikmallichetty/Desktop/code-sentinel-data-source/ref-train.jsonl",
+        "/Users/harthikmallichetty/Desktop/code-sentinel-data-source/processed-train.jsonl"
+    )
