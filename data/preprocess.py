@@ -29,3 +29,18 @@ def is_valid_comment(comment):
         return False
     
     return True
+
+def format_example(row):
+    """
+    format_example(row)
+
+    This function takes a JSONL dictionary input and returns a structured string output clearly classifying "lang", "hunk", and "comment". 
+
+    input: JSONL dicitonary
+    output: formatted string
+    """
+    return f'''[INST] Review the following code change and identify issues:
+Language: {row["lang"]}
+Diff: {row["hunk"]}
+Provide specific, actionable feedback.[/INST]
+{row["comment"]} '''
