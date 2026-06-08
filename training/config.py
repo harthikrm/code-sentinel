@@ -20,7 +20,10 @@ run1_config = {"r" : 16,
                "eval_steps" : 500,
                "save_steps" : 500,
                "fp16" : True,
-               "run_name" : "run1-r16-lr2e4-1epoch"}
+               "run_name" : "run1-r16-lr2e4-1epoch",
+               "train_data_path": "/Users/harthikmallichetty/Desktop/code-sentinel-data-source/processed-train.jsonl",
+               "validation_data_path": "/Users/harthikmallichetty/Desktop/code-sentinel-data-source/processed-valid.jsonl",
+               "smoke_test": True}
 
 run2_config = {**run1_config, 
               "num_train_epochs" : 3,
