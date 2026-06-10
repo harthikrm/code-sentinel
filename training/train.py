@@ -140,22 +140,28 @@ def train(config: Dict[str, Any]) -> None:
 
     # Attempt 4-bit NF4 load; on some Apple Silicon setups bitsandbytes may not support MPS.
     # In that case we fall back to a non-quantized load so the pipeline can still run.
+    # On MPS, avoid device_map="auto" — it can split layers across meta and mps:0 and break backprop.
     try:
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            quantization_config=bnb_config,
-            device_map="auto",
-        )
+        if device_type == "mps":
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                quantization_config=bnb_config,
+            )
+            model = model.to("mps")
+        else:
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                quantization_config=bnb_config,
+                device_map="auto",
+            )
     except Exception as e:
         if device_type == "mps":
             print(
                 "WARNING: 4-bit NF4 load failed on MPS. "
                 "Falling back to non-quantized loading for local dev."
             )
-            model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                device_map="auto",
-            )
+            model = AutoModelForCausalLM.from_pretrained(model_name)
+            model = model.to("mps")
         else:
             raise RuntimeError("Failed to load model with 4-bit NF4 quantization.") from e
     model.config.use_cache = False
@@ -240,7 +246,7 @@ def train(config: Dict[str, Any]) -> None:
 
     sft_config = SFTConfig(
         output_dir=output_dir,
-        max_seq_length=max_seq_length,
+        max_length=max_seq_length,
         num_train_epochs=int(config["num_train_epochs"]),
         per_device_train_batch_size=int(config["per_device_train_batch_size"]),
         gradient_accumulation_steps=int(config["gradient_accumulation_steps"]),
@@ -250,8 +256,9 @@ def train(config: Dict[str, Any]) -> None:
         logging_steps=int(config["logging_steps"]),
         eval_steps=int(config["eval_steps"]),
         save_steps=int(config["save_steps"]),
-        evaluation_strategy="steps",
+        eval_strategy="steps",
         save_strategy="steps",
+        dataset_text_field="text",
         fp16=use_fp16,
         bf16=False,
         report_to=[],  # we manually log to W&B via callbacks
@@ -264,8 +271,7 @@ def train(config: Dict[str, Any]) -> None:
         args=sft_config,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        tokenizer=tokenizer,
-        dataset_text_field="text",
+        processing_class=tokenizer,
         compute_metrics=compute_metrics,
         callbacks=[WandbLossAndEvalCallback()],
     )
