@@ -34,13 +34,13 @@ GPU_PROFILES: Dict[str, Dict[str, Any]] = {
         "accelerator_type": "NVIDIA_TESLA_T4",
         "accelerator_count": 1,
     },
-    "a100": {
-        "machine_type": "a2-highgpu-1g",
-        "accelerator_type": "NVIDIA_TESLA_A100",
+    "h100": {
+        "machine_type": "a3-highgpu-1g",
+        "accelerator_type": "NVIDIA_H100_80GB",
         "accelerator_count": 1,
     },
 }
-DEFAULT_GPU_PROFILE = "a100"
+DEFAULT_GPU_PROFILE = "h100"
 QUOTA_CONSOLE_URL = (
     f"https://console.cloud.google.com/iam-admin/quotas"
     f"?project={PROJECT_ID}&pageState=(%22allQuotasTable%22"
