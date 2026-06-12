@@ -11,11 +11,13 @@ run1_config = {"r" : 16,
                "task_type" : "CAUSAL_LM",
                "learning_rate" : 2e-4,
                "num_train_epochs" : 1,
-               "per_device_train_batch_size" : 4,
-               "gradient_accumulation_steps" : 4,
+               "per_device_train_batch_size" : 1,
+               "per_device_eval_batch_size" : 1,
+               "gradient_accumulation_steps" : 16,
+               "max_seq_length" : 1024,
                "warmup_ratio" : 0.03,
                "lr_scheduler_type" : "cosine",
-               "output_dir" : "./checkpoints/run1",
+               "output_dir": "gs://code-sentinel-training/checkpoints/run1",
                "logging_steps": 50,
                "eval_steps": 500,
                "save_steps": 500,
@@ -30,19 +32,25 @@ run2_config = {**run1_config,
               "output_dir" : "./checkpoints/run2",
               "run_name" : "run2-r16-lr2e4-3epoch"}
 
+subset_config = {**run2_config,
+                 "train_data_path": "gs://code-sentinel-training/data/processed-train.jsonl",
+                 "max_train_samples": 20000,
+                 "output_dir": "gs://code-sentinel-training/checkpoints/subset",
+                 "run_name": "subset-r16-lr2e4-20k-3epoch"}
+
 run3_config = {**run2_config,
                "r" : 8,
-               "output_dir" : "./checkpoints/run3",
+               "output_dir" : "gs://code-sentinel-training/checkpoints/run3",
                "run_name" : "run3-r8-lr2e4-3epoch"}
 
 run4_config = {**run2_config,
                "r" : 32,
-               "output_dir" : "./checkpoints/run4",
+               "output_dir" : "gs://code-sentinel-training/checkpoints/run4",
                "run_name" : "run4-r32-lr2e4-3epoch"}
 
 run5_config = {**run2_config,
                "learning_rate" : 1e-4,
-               "output_dir" : "./checkpoints/run5",
+               "output_dir" : "gs://code-sentinel-training/checkpoints/run5",
                "run_name" : "run5-r16-lr1e4-3epoch"}
 
 run6_config = {**run2_config,
