@@ -23,9 +23,9 @@ run1_config = {"r" : 16,
                "save_steps": 500,
                "fp16" : True,
                "run_name" : "run1-r16-lr2e4-1epoch",
+               "hf_repo_id": "harthikrm/code-sentinel-run1",
                "train_data_path": "gs://code-sentinel-training/data/processed-train.jsonl",
-               "validation_data_path": "gs://code-sentinel-training/data/processed-valid.jsonl",
-               "smoke_test": True}
+               "validation_data_path": "gs://code-sentinel-training/data/processed-valid.jsonl"}
 
 run2_config = {**run1_config, 
               "num_train_epochs" : 3,
