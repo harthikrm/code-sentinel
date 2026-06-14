@@ -22,7 +22,7 @@ from google.cloud import aiplatform, storage
 # -----------------------------------------------------------------------------
 PROJECT_ID = "code-sentinel-499017"
 REGIONS = ["us-east4", "europe-west4", "us-central1"]
-STAGING_BUCKET = "gs://code-sentinel-training"
+STAGING_BUCKET = "gs://code-sentinel-training-us"
 # .py310 images are required for Python package training on Vertex.
 BASE_IMAGE = "us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.2-4.py310:latest"
 PYTHON_MODULE = "trainer.task"

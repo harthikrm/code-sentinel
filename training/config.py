@@ -17,15 +17,16 @@ run1_config = {"r" : 16,
                "max_seq_length" : 1024,
                "warmup_ratio" : 0.03,
                "lr_scheduler_type" : "cosine",
-               "output_dir": "gs://code-sentinel-training/checkpoints/run1",
+               "output_dir": "gs://code-sentinel-training-us/checkpoints/run1",
                "logging_steps": 50,
                "eval_steps": 500,
                "save_steps": 500,
                "fp16" : True,
                "run_name" : "run1-r16-lr2e4-1epoch",
                "hf_repo_id": "harthikrm/code-sentinel-run1",
-               "train_data_path": "gs://code-sentinel-training/data/processed-train.jsonl",
-               "validation_data_path": "gs://code-sentinel-training/data/processed-valid.jsonl"}
+               "prediction_loss_only": True,
+               "train_data_path": "gs://code-sentinel-training-us/data/processed-train.jsonl",
+               "validation_data_path": "gs://code-sentinel-training-us/data/processed-valid.jsonl",}
 
 run2_config = {**run1_config, 
               "num_train_epochs" : 3,
@@ -67,8 +68,11 @@ run7_config = {**run2_config,
 
 run8_config = {**run2_config,
                "r" : 64,
-               "output_dir" : "./checkpoints/run8",
-               "run_name" : "run8-r64-lr2e4-3epoch"}
+               "num_train_epochs": 1,
+               "output_dir" : "gs://code-sentinel-training-us/checkpoints/run8",
+               "run_name" : "run8-r64-lr2e4-1epoch",
+               "prediction_loss_only": True,
+               "hf_repo_id": "harthikrm/code-sentinel-run8"}
 
 # run9 and run10 — update best_config after analyzing runs 1-8 in W&B
 
