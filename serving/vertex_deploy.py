@@ -22,7 +22,13 @@ from google.cloud import aiplatform, storage
 # -----------------------------------------------------------------------------
 PROJECT_ID = "code-sentinel-499017"
 REGIONS = ["us-east4", "europe-west4", "us-central1"]
-STAGING_BUCKET = "gs://code-sentinel-training-us"
+STAGING_BUCKET = "gs://code-sentinel-training"
+# Vertex rejects multi-region buckets for job staging/output — use per-region buckets.
+REGION_BUCKETS = {
+    "us-east4": "gs://code-sentinel-training-use4",
+    "europe-west4": "gs://code-sentinel-training-euw4",
+    "us-central1": "gs://code-sentinel-training",
+}
 # .py310 images are required for Python package training on Vertex.
 BASE_IMAGE = "us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.2-4.py310:latest"
 PYTHON_MODULE = "trainer.task"
@@ -338,18 +344,20 @@ def launch_training_job(
         )
 
         display_name = f"code-sentinel-{run_name}"
-        base_output_dir = f"{STAGING_BUCKET}/vertex-jobs/{run_name}"
 
         job: Optional[aiplatform.CustomJob] = None
         selected_region: Optional[str] = None
+        selected_base_output_dir: Optional[str] = None
         last_capacity_error: Optional[BaseException] = None
 
         for region in REGIONS:
-            print(f"Submitting Vertex AI job in region: {region}")
+            region_bucket = REGION_BUCKETS[region]
+            base_output_dir = f"{region_bucket}/vertex-jobs/{run_name}"
+            print(f"Submitting Vertex AI job in region: {region} (staging: {region_bucket})")
             aiplatform.init(
                 project=PROJECT_ID,
                 location=region,
-                staging_bucket=STAGING_BUCKET,
+                staging_bucket=region_bucket,
             )
 
             job = aiplatform.CustomJob(
@@ -358,7 +366,7 @@ def launch_training_job(
                 base_output_dir=base_output_dir,
                 project=PROJECT_ID,
                 location=region,
-                staging_bucket=STAGING_BUCKET,
+                staging_bucket=region_bucket,
             )
 
             try:
@@ -368,6 +376,7 @@ def launch_training_job(
                     job.run(sync=False)
                     job.wait_for_resource_creation()
                 selected_region = region
+                selected_base_output_dir = base_output_dir
                 print(f"Job submitted successfully in {region}")
                 break
             except Exception as exc:
@@ -392,7 +401,7 @@ def launch_training_job(
         print(f"  package_uri:    {package_gcs_uri}")
         print(f"  gpu_profile:    {gpu['name']} ({gpu['machine_type']} + {gpu['accelerator_type']})")
         print(f"  output_dir:     {job_config['output_dir']}")
-        print(f"  base_output:    {base_output_dir}")
+        print(f"  base_output:    {selected_base_output_dir}")
         print(f"  resource_name:  {job.resource_name}")
         print(
             "  console:        "
