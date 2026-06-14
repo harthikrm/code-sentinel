@@ -21,11 +21,18 @@ from google.cloud import aiplatform, storage
 # Vertex AI project settings
 # -----------------------------------------------------------------------------
 PROJECT_ID = "code-sentinel-499017"
-REGIONS = ["us-east4", "europe-west4", "us-central1"]
+REGIONS = ["us-central1", "europe-west4", "us-east4"]
 STAGING_BUCKET = "gs://code-sentinel-training"
 # Vertex rejects multi-region buckets for job staging/output — use per-region buckets.
 REGION_BUCKETS = {
+    "us-west1": "gs://code-sentinel-training-usw1",
+    "us-west2": "gs://code-sentinel-training-usw2",
+    "us-west3": "gs://code-sentinel-training-usw3",
+    "us-west4": "gs://code-sentinel-training-usw4",
+    "us-east1": "gs://code-sentinel-training-use1",
     "us-east4": "gs://code-sentinel-training-use4",
+    "us-east5": "gs://code-sentinel-training-use5",
+    "us-south1": "gs://code-sentinel-training-uss1",
     "europe-west4": "gs://code-sentinel-training-euw4",
     "us-central1": "gs://code-sentinel-training",
 }

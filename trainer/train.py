@@ -355,7 +355,7 @@ def train(config: Dict[str, Any]) -> None:
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         processing_class=tokenizer,
-        compute_metrics=compute_metrics if use_bertscore else None,
+        compute_metrics=compute_metrics if not prediction_loss_only else None,
         callbacks=[WandbLossAndEvalCallback()],
     )
 
