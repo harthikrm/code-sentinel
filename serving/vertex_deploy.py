@@ -97,7 +97,7 @@ def _check_gcp_credentials() -> None:
 
 def _is_capacity_error(exc: BaseException) -> bool:
     """Return True if the error indicates regional GPU quota or capacity exhaustion."""
-    if isinstance(exc, gcp_exceptions.ResourceExhausted):
+    if isinstance(exc, (gcp_exceptions.ResourceExhausted, gcp_exceptions.FailedPrecondition)):
         return True
     msg = str(exc).lower()
     capacity_markers = (
@@ -108,6 +108,7 @@ def _is_capacity_error(exc: BaseException) -> bool:
         "insufficient",
         "not available in region",
         "no capacity",
+        "resources are insufficient",
     )
     return any(marker in msg for marker in capacity_markers)
 
