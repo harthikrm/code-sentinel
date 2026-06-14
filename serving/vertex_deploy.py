@@ -21,7 +21,7 @@ from google.cloud import aiplatform, storage
 # Vertex AI project settings
 # -----------------------------------------------------------------------------
 PROJECT_ID = "code-sentinel-499017"
-REGION = "us-central1"
+REGIONS = ["us-east4", "europe-west4", "us-central1"]
 STAGING_BUCKET = "gs://code-sentinel-training"
 # .py310 images are required for Python package training on Vertex.
 BASE_IMAGE = "us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.2-4.py310:latest"
@@ -89,14 +89,38 @@ def _check_gcp_credentials() -> None:
         ) from exc
 
 
-def _format_quota_error(gpu: Dict[str, Any], exc: gcp_exceptions.ResourceExhausted) -> str:
-    """Return actionable guidance when Vertex GPU quota is exhausted."""
+def _is_capacity_error(exc: BaseException) -> bool:
+    """Return True if the error indicates regional GPU quota or capacity exhaustion."""
+    if isinstance(exc, gcp_exceptions.ResourceExhausted):
+        return True
+    msg = str(exc).lower()
+    capacity_markers = (
+        "capacity",
+        "quota",
+        "resource exhausted",
+        "resourceexhausted",
+        "insufficient",
+        "not available in region",
+        "no capacity",
+    )
+    return any(marker in msg for marker in capacity_markers)
+
+
+def _format_quota_error(
+    gpu: Dict[str, Any],
+    exc: BaseException,
+    *,
+    regions: Optional[List[str]] = None,
+) -> str:
+    """Return actionable guidance when Vertex GPU quota is exhausted in all regions."""
+    tried = regions or REGIONS
+    regions_list = ", ".join(tried)
     return (
         f"Vertex AI GPU quota exceeded for profile '{gpu['name']}' "
-        f"({gpu['accelerator_type']}).\n\n"
-        "Your GCP project likely has 0 training GPU quota. Request an increase:\n"
+        f"({gpu['accelerator_type']}) in all tried regions: {regions_list}.\n\n"
+        "Your GCP project likely has 0 training GPU quota in these regions. Request an increase:\n"
         f"  1. Open: {QUOTA_CONSOLE_URL}\n"
-        f"  2. Filter for region: {REGION}\n"
+        f"  2. Filter for regions: {regions_list}\n"
         "  3. Search and request increases for:\n"
         "     - Custom model training NVIDIA T4 GPUs\n"
         "     - Custom model training NVIDIA A100 GPUs (for full runs)\n"
@@ -302,15 +326,6 @@ def launch_training_job(
     )
     environment_variables = _build_environment_variables(job_config, wandb_api_key=wandb_api_key)
 
-    aiplatform.init(
-        project=PROJECT_ID,
-        location=REGION,
-        staging_bucket=STAGING_BUCKET,
-    )
-
-    display_name = f"code-sentinel-{run_name}"
-    base_output_dir = f"{STAGING_BUCKET}/vertex-jobs/{run_name}"
-
     with tempfile.TemporaryDirectory(prefix="code-sentinel-vertex-") as tmp:
         staging_dir = Path(tmp)
         archive_path = _build_source_distribution(staging_dir)
@@ -322,28 +337,57 @@ def launch_training_job(
             environment_variables=environment_variables,
         )
 
-        job = aiplatform.CustomJob(
-            display_name=display_name,
-            worker_pool_specs=worker_pool_specs,
-            base_output_dir=base_output_dir,
-            project=PROJECT_ID,
-            location=REGION,
-            staging_bucket=STAGING_BUCKET,
-        )
+        display_name = f"code-sentinel-{run_name}"
+        base_output_dir = f"{STAGING_BUCKET}/vertex-jobs/{run_name}"
 
-        try:
-            if sync:
-                job.run(sync=True)
-            else:
-                job.run(sync=False)
-                job.wait_for_resource_creation()
-        except gcp_exceptions.ResourceExhausted as exc:
-            raise gcp_exceptions.ResourceExhausted(
-                _format_quota_error(gpu, exc)
-            ) from exc
+        job: Optional[aiplatform.CustomJob] = None
+        selected_region: Optional[str] = None
+        last_capacity_error: Optional[BaseException] = None
+
+        for region in REGIONS:
+            print(f"Submitting Vertex AI job in region: {region}")
+            aiplatform.init(
+                project=PROJECT_ID,
+                location=region,
+                staging_bucket=STAGING_BUCKET,
+            )
+
+            job = aiplatform.CustomJob(
+                display_name=display_name,
+                worker_pool_specs=worker_pool_specs,
+                base_output_dir=base_output_dir,
+                project=PROJECT_ID,
+                location=region,
+                staging_bucket=STAGING_BUCKET,
+            )
+
+            try:
+                if sync:
+                    job.run(sync=True)
+                else:
+                    job.run(sync=False)
+                    job.wait_for_resource_creation()
+                selected_region = region
+                print(f"Job submitted successfully in {region}")
+                break
+            except Exception as exc:
+                if _is_capacity_error(exc):
+                    last_capacity_error = exc
+                    print(
+                        f"Capacity/quota error in {region}: {exc}\n"
+                        "Trying next region..."
+                    )
+                    continue
+                raise
+
+        if selected_region is None or job is None:
+            raise RuntimeError(
+                _format_quota_error(gpu, last_capacity_error or RuntimeError("Unknown error"), regions=REGIONS)
+            ) from last_capacity_error
 
         print(f"Submitted Vertex AI training job: {display_name}")
         print(f"  run_name:       {run_name}")
+        print(f"  region:         {selected_region}")
         print(f"  python_module:  {PYTHON_MODULE}")
         print(f"  package_uri:    {package_gcs_uri}")
         print(f"  gpu_profile:    {gpu['name']} ({gpu['machine_type']} + {gpu['accelerator_type']})")
@@ -353,7 +397,7 @@ def launch_training_job(
         print(
             "  console:        "
             f"https://console.cloud.google.com/vertex-ai/training/custom-jobs"
-            f"?project={PROJECT_ID}&region={REGION}"
+            f"?project={PROJECT_ID}&region={selected_region}"
         )
 
         return job
@@ -361,7 +405,6 @@ def launch_training_job(
 
 if __name__ == "__main__":
     sys.path.insert(0, str(REPO_ROOT))
-
-    from training.config import run1_config
-
+    from training.config import run1_config, run8_config
     launch_training_job(run1_config)
+    launch_training_job(run8_config)
