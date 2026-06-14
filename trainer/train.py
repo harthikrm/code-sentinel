@@ -1,6 +1,7 @@
 # Code Sentinel — QLoRA training entrypoint (Mistral-7B + W&B + BERTScore).
 
 import os
+import warnings
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -322,8 +323,7 @@ def train(config: Dict[str, Any]) -> None:
     # -----------------------------
     max_seq_length = int(config.get("max_seq_length", 2048))
     per_device_eval_batch_size = int(config.get("per_device_eval_batch_size", 1))
-    # BERTScore eval materializes full logits — skip on smoke tests to fit T4 memory.
-    use_bertscore = not config.get("smoke_test", False)
+    prediction_loss_only = config.get("prediction_loss_only", False)
 
     sft_config = SFTConfig(
         output_dir=local_output_dir,
@@ -345,7 +345,7 @@ def train(config: Dict[str, Any]) -> None:
         bf16=use_bf16,
         gradient_checkpointing=bool(config.get("gradient_checkpointing", True)),
         report_to=[],  # we manually log to W&B via callbacks
-        prediction_loss_only=not use_bertscore,
+        prediction_loss_only=prediction_loss_only,
         seed=config.get("seed", 42),
     )
 
@@ -366,6 +366,19 @@ def train(config: Dict[str, Any]) -> None:
         if gcs_output_dir is not None:
             print(f"Uploading checkpoints from {local_output_dir} to {gcs_output_dir}")
             upload_dir_to_gcs(local_output_dir, gcs_output_dir)
+
+        hf_repo_id = config.get("hf_repo_id")
+        if hf_repo_id:
+            hf_token = os.environ.get("HF_TOKEN")
+            try:
+                trainer.model.push_to_hub(hf_repo_id, token=hf_token)
+                tokenizer.push_to_hub(hf_repo_id, token=hf_token)
+                print(f"Pushed model and tokenizer to Hugging Face Hub: {hf_repo_id}")
+            except Exception as e:
+                warnings.warn(
+                    f"Hugging Face Hub push failed for {hf_repo_id}: {e}",
+                    stacklevel=2,
+                )
     finally:
         wandb.finish()
 
