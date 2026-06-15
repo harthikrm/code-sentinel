@@ -20,21 +20,11 @@ from google.cloud import aiplatform, storage
 # -----------------------------------------------------------------------------
 # Vertex AI project settings
 # -----------------------------------------------------------------------------
-PROJECT_ID = "code-sentinel-499017"
-REGIONS = ["us-central1", "europe-west4", "us-east4"]
-STAGING_BUCKET = "gs://code-sentinel-training"
-# Vertex rejects multi-region buckets for job staging/output — use per-region buckets.
+PROJECT_ID = "code-sentinel-2026"
+REGIONS = ["us-central1"]
+STAGING_BUCKET = "gs://code-sentinel-2026-training"
 REGION_BUCKETS = {
-    "us-west1": "gs://code-sentinel-training-usw1",
-    "us-west2": "gs://code-sentinel-training-usw2",
-    "us-west3": "gs://code-sentinel-training-usw3",
-    "us-west4": "gs://code-sentinel-training-usw4",
-    "us-east1": "gs://code-sentinel-training-use1",
-    "us-east4": "gs://code-sentinel-training-use4",
-    "us-east5": "gs://code-sentinel-training-use5",
-    "us-south1": "gs://code-sentinel-training-uss1",
-    "europe-west4": "gs://code-sentinel-training-euw4",
-    "us-central1": "gs://code-sentinel-training",
+    "us-central1": "gs://code-sentinel-2026-training",
 }
 # .py310 images are required for Python package training on Vertex.
 BASE_IMAGE = "us-docker.pkg.dev/vertex-ai/training/pytorch-gpu.2-4.py310:latest"
@@ -422,6 +412,5 @@ def launch_training_job(
 
 if __name__ == "__main__":
     sys.path.insert(0, str(REPO_ROOT))
-    from training.config import run1_config, run8_config
+    from training.config import run1_config
     launch_training_job(run1_config)
-    launch_training_job(run8_config)
