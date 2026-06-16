@@ -91,9 +91,9 @@ BERTScore F1 on the held-out test set (English):
 
 | Model | BERTScore F1 |
 |-------|--------------|
-| Base Mistral 7B | 0.7148 |
-| Fine-tuned Code Sentinel (best run) | [TBD] |
-| GPT-4o-mini | [TBD] |
+| Base Mistral 7B | 0.7149 |
+| Fine-tuned Code Sentinel (run1, r=16, lr=2e-4) | 0.7470 |
+| GPT-4o-mini | 0.7041 |
 
 Evaluation: `evaluation/compare_models.py`.
 
@@ -101,7 +101,10 @@ Evaluation: `evaluation/compare_models.py`.
 
 ## Key Findings
 
-Coming soon — experiments in progress.
+- Fine-tuned Mistral-7B outperforms base model by 4.5% BERTScore F1 (0.7470 vs 0.7149)
+- Fine-tuned model outperforms GPT-4o-mini by 6.1% (0.7470 vs 0.7041)
+- Lower LoRA rank (r=8, run3) achieved best eval loss among 3-epoch runs (~1.32)
+- Higher rank (r=32, run4) showed higher eval loss and instability (~1.38)
 
 ---
 

@@ -10,22 +10,26 @@ from openai import OpenAI
 BASELINE_BERTSCORE_F1 = 0.7148823738098145
 
 TEST_FILE = "/Users/harthikmallichetty/Desktop/code-sentinel-data-source/ref-test.jsonl"
-MERGED_MODEL_PATH = "gs://code-sentinel-training-us/merged-model/run1"
+MERGED_MODEL_PATH = "/tmp/code-sentinel-merged/run1"
 
-def evaluate_fine_tuned_models(model_path, examples):
-    """
-    evaluate_fine_tuned_models(model_path, examples)
-
-    This function takes in path to model merged with new training-adjusted weights and runs the model on examples to generate list of predictions.
-    """
-
-    model, tokenizer = load(model_path)
-
+def evaluate_fine_tuned_models(adapter_path, examples):
+    from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+    import torch
+    
+    tokenizer = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-Instruct-v0.3")
+    model = AutoModelForCausalLM.from_pretrained(
+        adapter_path,
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+    
+    pipe = pipeline("text-generation", model=model, tokenizer=tokenizer)
+    
     predictions = []
-
     for line in examples:
-        predictions.append(generate(model, tokenizer, format_prompt(line), max_tokens=256))
-
+        result = pipe(format_prompt(line), max_new_tokens=256, return_full_text=False)
+        predictions.append(result[0]["generated_text"])
+    
     return predictions
 
 def evaluate_gpt4o_mini(examples):
