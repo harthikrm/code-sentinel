@@ -8,11 +8,13 @@ Required environment variables:
     GITHUB_TOKEN: GitHub API token with ``pull-requests: write``.
     GITHUB_REPOSITORY: ``owner/repo`` slug for the target repository.
     PR_NUMBER: Pull request number to review.
-    CODE_SENTINEL_API_URL: Base URL of the Code Sentinel FastAPI service.
+    CODE_SENTINEL_API_URL: Vertex predict URL or Code Sentinel API base URL.
+    GCP_SERVICE_ACCOUNT_KEY: JSON service account key for Vertex authentication.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from dataclasses import dataclass
@@ -20,6 +22,8 @@ from fnmatch import fnmatch
 from typing import Dict, List, Optional, Sequence, Tuple
 from urllib.parse import urljoin
 
+import google.auth.transport.requests
+import google.oauth2.service_account
 import requests
 
 GITHUB_API_URL = os.environ.get("GITHUB_API_URL", "https://api.github.com")
@@ -90,6 +94,38 @@ class HunkReview:
     filename: str
     hunk_index: int
     review: str
+
+
+def get_gcp_token() -> str:
+    """
+    Obtain a short-lived GCP access token from a service account JSON key.
+
+    Returns:
+        OAuth2 bearer token for Vertex AI predict requests.
+
+    Raises:
+        EnvironmentError: If ``GCP_SERVICE_ACCOUNT_KEY`` is missing or invalid.
+    """
+    key_json = os.environ.get("GCP_SERVICE_ACCOUNT_KEY")
+    if not key_json:
+        raise EnvironmentError("Missing GCP_SERVICE_ACCOUNT_KEY")
+
+    key_dict = json.loads(key_json)
+    credentials = google.oauth2.service_account.Credentials.from_service_account_info(
+        key_dict,
+        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    )
+    request = google.auth.transport.requests.Request()
+    credentials.refresh(request)
+    return credentials.token
+
+
+def _api_headers(gcp_token: str) -> Dict[str, str]:
+    """Build authorization headers for Code Sentinel / Vertex predict requests."""
+    return {
+        "Authorization": f"Bearer {gcp_token}",
+        "Content-Type": "application/json",
+    }
 
 
 def _require_env(name: str) -> str:
@@ -282,6 +318,8 @@ def collect_reviewable_hunks(files: Sequence[dict]) -> List[FileHunk]:
 def request_hunk_review(
     api_base_url: str,
     hunk: FileHunk,
+    *,
+    headers: Dict[str, str],
 ) -> str:
     """
     Call Code Sentinel ``POST /review`` for a single diff hunk.
@@ -289,6 +327,7 @@ def request_hunk_review(
     Args:
         api_base_url: Service base URL (no trailing path required).
         hunk: Diff hunk and language metadata.
+        headers: Request headers including GCP bearer token.
 
     Returns:
         Generated review text from the API.
@@ -300,6 +339,7 @@ def request_hunk_review(
     review_url = urljoin(api_base_url.rstrip("/") + "/", "review")
     response = requests.post(
         review_url,
+        headers=headers,
         json={"diff": hunk.diff, "lang": hunk.language},
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
@@ -314,6 +354,8 @@ def request_hunk_review(
 def review_all_hunks(
     api_base_url: str,
     hunks: Sequence[FileHunk],
+    *,
+    headers: Dict[str, str],
 ) -> List[HunkReview]:
     """
     Run Code Sentinel on every reviewable hunk.
@@ -321,6 +363,7 @@ def review_all_hunks(
     Args:
         api_base_url: Code Sentinel service base URL.
         hunks: Hunks collected from the pull request.
+        headers: Request headers including GCP bearer token.
 
     Returns:
         List of per-hunk reviews. Failed hunks include an error note instead of
@@ -330,7 +373,7 @@ def review_all_hunks(
 
     for hunk in hunks:
         try:
-            review_text = request_hunk_review(api_base_url, hunk)
+            review_text = request_hunk_review(api_base_url, hunk, headers=headers)
         except requests.RequestException as exc:
             review_text = f"_Review request failed: {exc}_"
         results.append(
@@ -442,6 +485,9 @@ def run_review() -> None:
     Reads configuration from environment variables, fetches the PR diff, calls
     Code Sentinel for each hunk, and posts an aggregated comment.
     """
+    gcp_token = get_gcp_token()
+    headers = _api_headers(gcp_token)
+
     token = _require_env("GITHUB_TOKEN")
     repository = _require_env("GITHUB_REPOSITORY")
     pr_number = int(_require_env("PR_NUMBER"))
@@ -456,7 +502,7 @@ def run_review() -> None:
     hunks = collect_reviewable_hunks(files)
     print(f"Found {len(hunks)} reviewable hunk(s) across {len(files)} changed file(s)")
 
-    reviews = review_all_hunks(api_base_url, hunks)
+    reviews = review_all_hunks(api_base_url, hunks, headers=headers)
     comment_body = format_review_comment(
         pr_number,
         reviews,

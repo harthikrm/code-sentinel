@@ -1,0 +1,11 @@
+fastapi==0.115.12
+uvicorn==0.34.2
+transformers==4.57.6
+accelerate
+torch
+peft
+gcsfs
+google-auth
+google-cloud-storage
+sentencepiece
+protobuf
