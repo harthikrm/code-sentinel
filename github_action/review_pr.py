@@ -9,21 +9,18 @@ Required environment variables:
     GITHUB_REPOSITORY: ``owner/repo`` slug for the target repository.
     PR_NUMBER: Pull request number to review.
     CODE_SENTINEL_API_URL: Vertex predict URL or Code Sentinel API base URL.
-    GCP_SERVICE_ACCOUNT_KEY: Base64-encoded JSON service account key for Vertex authentication.
 """
 
 from __future__ import annotations
 
-import base64
-import json
 import os
 import sys
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from typing import Dict, List, Optional, Sequence, Tuple
 
+import google.auth
 import google.auth.transport.requests
-import google.oauth2.service_account
 import requests
 
 GITHUB_API_URL = os.environ.get("GITHUB_API_URL", "https://api.github.com")
@@ -98,23 +95,13 @@ class HunkReview:
 
 def get_gcp_token() -> str:
     """
-    Obtain a short-lived GCP access token from a base64-encoded service account JSON key.
+    Obtain a short-lived GCP access token via Application Default Credentials.
 
     Returns:
         OAuth2 bearer token for Vertex AI predict requests.
-
-    Raises:
-        EnvironmentError: If ``GCP_SERVICE_ACCOUNT_KEY`` is missing or invalid.
     """
-    key_b64 = os.environ.get("GCP_SERVICE_ACCOUNT_KEY")
-    if not key_b64:
-        raise EnvironmentError("Missing GCP_SERVICE_ACCOUNT_KEY")
-
-    key_json = base64.b64decode(key_b64).decode("utf-8")
-    key_dict = json.loads(key_json)
-    credentials = google.oauth2.service_account.Credentials.from_service_account_info(
-        key_dict,
-        scopes=["https://www.googleapis.com/auth/cloud-platform"],
+    credentials, _ = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
     )
     request = google.auth.transport.requests.Request()
     credentials.refresh(request)

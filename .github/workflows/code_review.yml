@@ -12,10 +12,11 @@
 #           Examples:
 #             https://your-vertex-endpoint.us-central1-123456.prediction.vertexai.goog/v1/projects/.../endpoints/.../deployedModels/...
 #             https://abc123.ngrok-free.app
-# 5. GITHUB_TOKEN is provided automatically — no secret needed.
+# 5. Name:  GCP_SERVICE_ACCOUNT_KEY
+#    Value: JSON service account key with Vertex AI predict access.
+# 6. GITHUB_TOKEN is provided automatically — no secret needed.
 #    This workflow requests pull-requests: write so the bot can post comments.
-# 6. Open a test PR; the workflow posts a "Code Sentinel Review" comment.
-# ---------------------------------------------------------------------------
+# 7. Open a test PR; the workflow posts a "Code Sentinel Review" comment.
 
 name: Code Sentinel PR Review
 
@@ -47,10 +48,14 @@ jobs:
       - name: Install dependencies
         run: pip install requests google-auth
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+
       - name: Run Code Sentinel PR review
         env:
           CODE_SENTINEL_API_URL: ${{ secrets.CODE_SENTINEL_API_URL }}
-          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GITHUB_REPOSITORY: ${{ github.repository }}
