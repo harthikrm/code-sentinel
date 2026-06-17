@@ -20,7 +20,6 @@ import sys
 from dataclasses import dataclass
 from fnmatch import fnmatch
 from typing import Dict, List, Optional, Sequence, Tuple
-from urllib.parse import urljoin
 
 import google.auth.transport.requests
 import google.oauth2.service_account
@@ -316,16 +315,16 @@ def collect_reviewable_hunks(files: Sequence[dict]) -> List[FileHunk]:
 
 
 def request_hunk_review(
-    api_base_url: str,
+    predict_url: str,
     hunk: FileHunk,
     *,
     headers: Dict[str, str],
 ) -> str:
     """
-    Call Code Sentinel ``POST /review`` for a single diff hunk.
+    Call the Vertex AI ``:predict`` endpoint for a single diff hunk.
 
     Args:
-        api_base_url: Service base URL (no trailing path required).
+        predict_url: Full Vertex predict URL from ``CODE_SENTINEL_API_URL``.
         hunk: Diff hunk and language metadata.
         headers: Request headers including GCP bearer token.
 
@@ -336,15 +335,19 @@ def request_hunk_review(
         requests.HTTPError: If the inference request fails.
         requests.RequestException: On network or timeout errors.
     """
-    review_url = urljoin(api_base_url.rstrip("/") + "/", "review")
     response = requests.post(
-        review_url,
+        predict_url,
         headers=headers,
-        json={"diff": hunk.diff, "lang": hunk.language},
+        json={"instances": [{"diff": hunk.diff, "lang": hunk.language}]},
         timeout=REQUEST_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     payload = response.json()
+    predictions = payload.get("predictions", [])
+    if predictions and isinstance(predictions[0], dict):
+        review = predictions[0].get("review", "").strip()
+        if review:
+            return review
     review = payload.get("review", "").strip()
     if not review:
         return "_No review text returned._"
@@ -352,7 +355,7 @@ def request_hunk_review(
 
 
 def review_all_hunks(
-    api_base_url: str,
+    predict_url: str,
     hunks: Sequence[FileHunk],
     *,
     headers: Dict[str, str],
@@ -361,7 +364,7 @@ def review_all_hunks(
     Run Code Sentinel on every reviewable hunk.
 
     Args:
-        api_base_url: Code Sentinel service base URL.
+        predict_url: Full Vertex predict URL from ``CODE_SENTINEL_API_URL``.
         hunks: Hunks collected from the pull request.
         headers: Request headers including GCP bearer token.
 
@@ -373,7 +376,7 @@ def review_all_hunks(
 
     for hunk in hunks:
         try:
-            review_text = request_hunk_review(api_base_url, hunk, headers=headers)
+            review_text = request_hunk_review(predict_url, hunk, headers=headers)
         except requests.RequestException as exc:
             review_text = f"_Review request failed: {exc}_"
         results.append(
@@ -491,7 +494,7 @@ def run_review() -> None:
     token = _require_env("GITHUB_TOKEN")
     repository = _require_env("GITHUB_REPOSITORY")
     pr_number = int(_require_env("PR_NUMBER"))
-    api_base_url = _require_env("CODE_SENTINEL_API_URL")
+    predict_url = _require_env("CODE_SENTINEL_API_URL")
 
     print(f"Reviewing {repository} PR #{pr_number}")
     files = fetch_pull_request_files(token, repository, pr_number)
@@ -502,7 +505,7 @@ def run_review() -> None:
     hunks = collect_reviewable_hunks(files)
     print(f"Found {len(hunks)} reviewable hunk(s) across {len(files)} changed file(s)")
 
-    reviews = review_all_hunks(api_base_url, hunks, headers=headers)
+    reviews = review_all_hunks(predict_url, hunks, headers=headers)
     comment_body = format_review_comment(
         pr_number,
         reviews,
