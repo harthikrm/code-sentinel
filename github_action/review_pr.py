@@ -9,11 +9,12 @@ Required environment variables:
     GITHUB_REPOSITORY: ``owner/repo`` slug for the target repository.
     PR_NUMBER: Pull request number to review.
     CODE_SENTINEL_API_URL: Vertex predict URL or Code Sentinel API base URL.
-    GCP_SERVICE_ACCOUNT_KEY: JSON service account key for Vertex authentication.
+    GCP_SERVICE_ACCOUNT_KEY: Base64-encoded JSON service account key for Vertex authentication.
 """
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sys
@@ -97,7 +98,7 @@ class HunkReview:
 
 def get_gcp_token() -> str:
     """
-    Obtain a short-lived GCP access token from a service account JSON key.
+    Obtain a short-lived GCP access token from a base64-encoded service account JSON key.
 
     Returns:
         OAuth2 bearer token for Vertex AI predict requests.
@@ -105,10 +106,11 @@ def get_gcp_token() -> str:
     Raises:
         EnvironmentError: If ``GCP_SERVICE_ACCOUNT_KEY`` is missing or invalid.
     """
-    key_json = os.environ.get("GCP_SERVICE_ACCOUNT_KEY")
-    if not key_json:
+    key_b64 = os.environ.get("GCP_SERVICE_ACCOUNT_KEY")
+    if not key_b64:
         raise EnvironmentError("Missing GCP_SERVICE_ACCOUNT_KEY")
 
+    key_json = base64.b64decode(key_b64).decode("utf-8")
     key_dict = json.loads(key_json)
     credentials = google.oauth2.service_account.Credentials.from_service_account_info(
         key_dict,
