@@ -49,8 +49,8 @@ jobs:
 
       - name: Run Code Sentinel PR review
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           CODE_SENTINEL_API_URL: ${{ secrets.CODE_SENTINEL_API_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: python github_action/review_pr.py
